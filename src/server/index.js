@@ -8,9 +8,11 @@ import serverRenderer from "./moduleRenderer";
 import fetch from "./fetch";
 import requireFromString from "require-from-string";
 import { namespaced, namespacedAction } from "redux-subspace";
+import apolloClient from './initApollo';
+import gql from 'graphql-tag';
 
 const urlPrefix = "http://localhost:8002/shared";
-const API_SERVER = "http://localhost:8003";
+const API_SERVER = "http://localhost:4001";
 
 const app = express();
 
@@ -55,11 +57,24 @@ app.use(async (req, res, next) => {
 
     if (req.body.api) {
       const actionTypes = moduleObj.ActionTypes;
-      const data = await fetch(API_SERVER + req.body.api, undefined, true);
+      const graphQLQuery = gql`
+      {
+        user {
+          name
+        }
+        todos: tasks {
+          id
+          label
+          done
+        }
+      }
+      `;
+      const moduleData = await apolloClient.query({query: graphQLQuery});
+      console.log(moduleData);
       req.store.dispatch(
         namespacedAction(moduleName)({
           type: actionTypes.INIT,
-          state: { [moduleName]: data }
+          state: { [moduleName]: moduleData.data }
         })
       );
     }
